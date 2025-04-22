@@ -19,6 +19,7 @@ from rich.progress import Progress
 import tqdm
 import time
 
+#제어 시퀀스를 만들어서 모델 학습데이터를 쌓는 코드
 
 class CameraController:
     def __init__(self, franka):

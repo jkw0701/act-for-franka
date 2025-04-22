@@ -24,6 +24,7 @@ from gazebo_msgs.srv import SetModelState, SetModelStateRequest
 from rich.progress import Progress
 from training.utils import make_policy, get_image
 
+#기존 코드의 문제점을 개선하였으나 시뮬레이션상에서의 움직임이 부자연스러워짐
 
 class PIDController:
     def __init__(self, p_gain = 0.05, i_gain = 0.0, d_gain = 0.01 , dt=0.001):

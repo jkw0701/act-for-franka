@@ -16,6 +16,7 @@ GRASP = 0.025
 DATASET_DIR = "/home/namyoon/ACTfranka/real_dir3/processed"
 # DATASET_DIR = "/home/summit-nuc/ACTFranka/real_dir3/processed"
 
+# 실제 로봇에서의 모방학습 데이터를 쌓는 코드
 #/multisense_sl/camera/left/image_raw 카메라 노드의 메세지를 기준으로 바뀔 수 있다.
 
 class CameraController:

@@ -24,6 +24,8 @@ from gazebo_msgs.srv import SetModelState, SetModelStateRequest
 from rich.progress import Progress
 from training.utils import make_policy, get_image
 
+#pid제어를 넣었지만 현재상태가 최신화되지 않는 제어로 인해 오류 발생
+# 이 코드가 시뮬레이션 상에서는 가장 부드러움
 
 class PIDController:
     def __init__(self, p_gain = 0.5, i_gain = 0.0, d_gain = 0.01 , dt=0.001):
