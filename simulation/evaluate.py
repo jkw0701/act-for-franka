@@ -7,6 +7,7 @@ import rospy
 import pickle
 import csv
 import os
+import time
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from gazebo_msgs.srv import GetModelState, GetModelStateRequest
@@ -23,12 +24,11 @@ from settings.var import GRIPPER_FORCE, BOX_Z, POLICY_CONFIG, TASK_CONFIG, TRAIN
 from gazebo_msgs.srv import SetModelState, SetModelStateRequest
 from rich.progress import Progress
 from training.utils import make_policy, get_image
-
-#pid제어를 넣었지만 현재상태가 최신화되지 않는 제어로 인해 오류 발생
-# 이 코드가 시뮬레이션 상에서는 가장 부드러움
+import threading
+from queue import Queue  # (위 import 구역에도 추가 필요)
 
 class PIDController:
-    def __init__(self, p_gain = 0.5, i_gain = 0.0, d_gain = 0.01 , dt=0.001):
+    def __init__(self, p_gain = 0.6, i_gain = 0.0, d_gain = 0.01 , dt=0.001):
         self.p_gain = p_gain
         self.i_gain = i_gain
         self.d_gain = d_gain
@@ -36,16 +36,23 @@ class PIDController:
         self.prev_error = 0
         self.integral = 0
 
-    def compute(self, target, current):
-        error = target - current
-        self.integral += error * self.dt
-        derivative = (error - self.prev_error) / self.dt
-        output = self.p_gain * error + self.i_gain * self.integral + self.d_gain * derivative
-        self.prev_error = error
-        return output
+    def compute(self, x0, x1, T, t):
+        tau = t / T  # 정규화된 시간 (0~1)
+        return x0 + (x1 - x0) * (3 * tau**2 - 2 * tau**3)
 
 class Simulator:
     def __init__(self, policy, policy_config, task_config, stats, device):
+
+        self.policy = policy
+        self.policy_config = policy_config
+        self.cfg = task_config
+        self.device = device
+        self.stats = stats
+        self.pre_process = lambda pos: (pos - stats['qpos_mean']) / stats['qpos_std']
+        self.post_process = lambda act: act * stats['action_std'] + stats['action_mean']
+        self.bridge = CvBridge()
+
+        self.image_cache = {}  # ← 반드시 Subscriber 선언 전에 위치해야 함
 
         rospy.init_node('robot_controller', anonymous=True)
         joint_state_topic='/joint_states'
@@ -61,14 +68,19 @@ class Simulator:
         self.gripper_publisher = rospy.Publisher('/franka_gripper/move/goal', MoveActionGoal, queue_size=10)
         self.grasp_publisher = rospy.Publisher('/franka_gripper/grasp/goal', GraspActionGoal, queue_size=10)
 
-        self.policy = policy
-        self.policy_config = policy_config
-        self.cfg = task_config
-        self.device = device
-        self.stats = stats
-        self.pre_process = lambda pos: (pos - stats['qpos_mean']) / stats['qpos_std']
-        self.post_process = lambda act: act * stats['action_std'] + stats['action_mean']
-        self.bridge = CvBridge()
+        for cn in self.cfg['camera_names']:
+            topic = {
+                'left': '/multisense_sl/camera/left/image_raw',
+                'right': '/multisense_sl/camera/right/image_raw',
+                'gripper': '/gripper_camera/image_raw'
+            }.get(cn, '/multisense_sl/camera/left/image_raw')
+
+            rospy.Subscriber(topic, Image, lambda msg, cn=cn: self.image_callback(msg, cn))
+
+
+        self.policy_input_queue = Queue()
+        self.policy_output_queue = Queue()
+        threading.Thread(target=self.policy_worker, daemon=True).start()
 
         rospy.sleep(0.1)
         print("현재 포지션 입력 대기")
@@ -101,6 +113,12 @@ class Simulator:
                 positions[idx] = msg.position[pos_idx]
         self.current_positions = positions
 
+    def image_callback(self, msg, camera_name):
+        try:
+            self.image_cache[camera_name] = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        except Exception as e:
+            rospy.logwarn(f"[IMAGE] Error converting image: {e}")
+
     def angles(self):
         if self.current_positions is None:
             rospy.logwarn("Current positions have not been received yet.")
@@ -118,7 +136,7 @@ class Simulator:
 
         self.gripper_publisher.publish(move_goal)
 
-    def grasp(self,width,force=5,speed=0.1,inner_epsilon=0.005,outer_epsilon=0.005):
+    def grasp(self,width,force=10,speed=0.1,inner_epsilon=0.005,outer_epsilon=0.005):
                
         if not rospy.core.is_initialized():
             rospy.init_node('gripper_command_publisher', anonymous=True)
@@ -142,7 +160,7 @@ class Simulator:
     def initial_pose(self, current_positions):
 
         angles = [0, -0.7, 0, -2.35619449, 0, 1.57079632679, 0.785398163397]
-        self.move_to_joint_position_with_PID(current_positions , angles ,duration= 3 )
+        self.move_to_joint_position_with_PID(current_positions , angles ,duration = 1 )
 
     ## 시뮬 상 박스 위치를 부여하고 성공 여부를 판단하는 함수들// 실제 동작에서는 제거해도 된다.
     def check_success(self):
@@ -184,11 +202,14 @@ class Simulator:
 
         return x , y
 
+    def async_pid_move(self, current, target, duration):
+        self.move_to_joint_position_with_PID(current, target, duration)
+
     def move_to_joint_position_with_PID(self, current_positions, target_angles, duration=0.5):
         if current_positions is None:
             rospy.logwarn("Current joint positions not available.")
             return
-        dt = 0.0003
+        dt = 0.001
         steps = int(duration/dt)
         start = np.array(current_positions)
         end = np.array(target_angles)
@@ -198,33 +219,13 @@ class Simulator:
         pid_controllers = [PIDController() for _ in range(7)]
         rate = rospy.Rate(hz)
         
-        # 이전 위치 및 속도 저장용 변수 초기화
-        prev_positions = list(current_positions)
-        prev_velocities = [0.0] * 7
-        time_step = duration / steps
-
         for i, t in enumerate(times):
             position = []
-            #velocity = []
-            #acceleration = []
 
             for j in range(7):
                 # PID 제어를 이용한 위치 계산
-                pid_output = pid_controllers[j].compute(end[j], current_positions[j])
-                new_position = current_positions[j] + pid_output
-                position.append(new_position)
-
-                # 속도 = (현재 위치 - 이전 위치) / 시간 간격
-                #vel = (new_position - prev_positions[j]) / time_step
-                #velocity.append(vel)
-
-                # 가속도 = (현재 속도 - 이전 속도) / 시간 간격
-                #acc = (vel - prev_velocities[j]) / time_step
-                #acceleration.append(acc)
-
-                # 이전 상태 갱신
-                #prev_positions[j] = new_position
-                #prev_velocities[j] = vel
+                pid_output = pid_controllers[j].compute(self.current_positions[j], end[j], steps , i)
+                position.append(pid_output)
 
             # ROS 메시지 생성 및 발행
             msg = JointCommand()
@@ -242,26 +243,21 @@ class Simulator:
 
         #rospy.loginfo("Finished sending PID-controlled trajectory.")
 
-    # 여기서 이미지 입력값을 가져온다. 일반적인 입력과 다름
     def capture_image(self, camera_name):
-        camera_topics = {
-            'left': '/multisense_sl/camera/left/image_raw',
-            'right': '/multisense_sl/camera/right/image_raw',
-            'gripper': '/gripper_camera/image_raw'
-        }
-
-        # =============================================== need to check ==========================================
-        topic = camera_topics.get(camera_name, '/multisense_sl/camera/left/image_raw') 
-        # =============================================== need to check ==========================================
-
-        msg = rospy.wait_for_message(topic, Image, timeout=5)
-        return self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        return self.image_cache.get(camera_name, np.zeros((480, 640, 3), dtype=np.uint8))
+    
+    def policy_worker(self):
+        while not rospy.is_shutdown():
+            t_input, qpos_input, image = self.policy_input_queue.get()
+            with torch.no_grad():
+                actions = self.policy(qpos_input, image)
+            self.policy_output_queue.put((t_input, actions))    
 
     def simulate(self):
         query_frequency = self.policy_config['num_queries'] #149 
         
         if self.policy_config['temporal_agg']:
-            query_frequency = 5 # 30  
+            query_frequency = 10 # 30  
             num_queries = self.policy_config['num_queries']
             all_time_actions = torch.zeros([self.cfg['episode_len'], self.cfg['episode_len']+num_queries, self.cfg['state_dim']]).to(self.device)
         
@@ -269,17 +265,22 @@ class Simulator:
             num_queries = self.policy_config['num_queries']
             all_time_actions = torch.zeros([self.cfg['episode_len'], self.cfg['episode_len']+3, self.cfg['state_dim']]).to(self.device)
 
-        qpos_history = torch.zeros((1, self.cfg['episode_len'], self.cfg['state_dim'])).to(self.device)
-
+        #qpos_history = torch.zeros((1, self.cfg['episode_len'], self.cfg['state_dim'])).to(self.device)
+        
         with Progress() as progress:
             task = progress.add_task("[green]Running real-time simulation...", total=self.cfg['episode_len'])
             action_list = [] #csv에 저장할 액션리스트
-            for t in range(self.cfg['episode_len']):
+            hz = 50
+            rate = rospy.Rate(hz)  # 30Hz 루프
+            prev_time = time.time()
+            all_actions = None  # ← simulate() 루프 안에서
 
+            for t in range(self.cfg['episode_len']):
                 progress.update(task, advance=1)
 
                 qpos = self.angles()
                 gripper_width = self.gripper_state()
+                #print(gripper_width)
                 gripper_binary = 0 if gripper_width > 0.04 else 1
                 pos = np.append(qpos, gripper_binary)
 
@@ -289,12 +290,18 @@ class Simulator:
                 curr_image = get_image(images, self.cfg['camera_names'], self.device)
 
                 if t % query_frequency == 0:
-                    print("[INFO] Running policy..!!!!!!!!!!!!!.")
-                    with torch.no_grad():
-                        all_actions = self.policy(qpos_input, curr_image)
-                        all_time_actions[[t], t:t+num_queries] = all_actions
+                    #print("[INFO] Running policy..!!!!!!!!!!!!!.")
+                    self.policy_input_queue.put((t, qpos_input, curr_image))
 
-                    
+                while not self.policy_output_queue.empty():
+                    t_result, all_actions = self.policy_output_queue.get()
+                    all_time_actions[[t_result], t_result:t_result+num_queries] = all_actions
+
+                if t == 0:
+                    time.sleep(0.5)
+                    t_result, all_actions = self.policy_output_queue.get()
+                    all_time_actions[[t_result], t_result:t_result+num_queries] = all_actions
+                
                 if self.policy_config['temporal_agg']:
                     all_time_actions[[t], t:t+num_queries] = all_actions
                     actions_for_curr_step = all_time_actions[:, t]
@@ -327,20 +334,27 @@ class Simulator:
                     print(f"Position error too large: {position_error}")
                 else:
                     #if t % 10 == 0:
-                    self.move_to_joint_position_with_PID(self.current_positions , joint_positions, duration = 1.7 * position_error)
-
+                    threading.Thread(
+                            target=self.async_pid_move, 
+                            args=(self.current_positions, joint_positions, 1 / hz + 0.05)
+                        ).start()
                 #print("gripper action: ", gripper_action)
                 
-                if not self.gripper_grasp_position:
+                if gripper_action > 0.5: # 0.9
+                    #print("IN gripper action !!!!!!!!! ")
+                    self.grasp(0.024 , 15)
 
-                    if gripper_action > 0.2: # 0.9
-                        print("IN gripper action !!!!!!!!! ")
-                        self.grasp(0.0249, 5)
-                        #self.gripper_grasp_position = True
 
-                    else:
-                        print("in else grippger aciton !!!!!!!!!! ")
-                        self.exec_gripper_cmd(0.08, GRIPPER_FORCE)
+                else:
+                    #print("in else grippger aciton !!!!!!!!!! ")
+                    self.exec_gripper_cmd(0.08, GRIPPER_FORCE)
+
+                rate.sleep()
+                now = time.time()
+                dt = now - prev_time
+                prev_time = now
+                print(f"[{t}] 루프 주기: {dt:.4f} 초, {1/dt:.2f} Hz")
+                
 
             df = pd.DataFrame(action_list, columns = ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6", "joint7", "gripper"])
             df.to_csv('actions_0414_1418.csv', index=False)
@@ -352,7 +366,7 @@ if __name__ == "__main__":
     policy_config = POLICY_CONFIG
     train_cfg = TRAIN_CONFIG
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+    #device = torch.device('cpu')
     # Load policy
     policy = make_policy(policy_config['policy_class'], policy_config)
     ckpt_path = os.path.join(train_cfg['checkpoint_dir'], train_cfg['eval_ckpt_name'])

@@ -19,7 +19,6 @@ from rich.progress import Progress
 import tqdm
 import time
 
-#제어 시퀀스를 만들어서 모델 학습데이터를 쌓는 코드
 
 class CameraController:
     def __init__(self, franka):
@@ -60,10 +59,20 @@ class CameraController:
                 # print(f"Added front frame {len(self.data_front)}")
 
                 joint_angles = list(self.franka.angles())
-               
-                gripper_status = 1 if self.gripper_width == GRASP else 0
+                
+                if self.franka.gripper_state() > 0.041 :
+                    gripper_status = 0 
+                
+                elif self.franka.gripper_state() > 0.03 :
+                    gripper_status = 1
+
+                else: # 못잡았을 때 값을 지정할 수 있다.
+                    gripper_status = 1
+                
                 joint_angles.append(gripper_status)
                 self.joint_positions.append(joint_angles)
+
+                print(self.franka.gripper_state(),gripper_status )
 
 
 
