@@ -7,18 +7,18 @@ if torch.cuda.is_available():
 os.environ['DEVICE'] = device
 
 # Paths
-CHECKPOINT_DIR = '/home/namyoon/ACTfranka/demo/checkpoints'
+CHECKPOINT_DIR = '/home/namyoon/ACTfranka/demo4/checkpoints'
 DATASET_DIR = "/home/namyoon/ACTfranka/real_dir2/processed"
 
 # Initial configuration
 INITIAL_JOINTS = [0, -0.7, 0, -2.35619449, 0, 1.57079632679, 0.785398163397]
 OPEN_GRIPPER_POSE = 0.08
-GRASP = 0.025
+GRASP = 0.041
 GRIPPER_FORCE = 1
 INITIAL_GRIPPER_POSE = 0.06
 TOTAL_EPISODES = 30
 BOX_Z = 0.04
-MAX_STEPS = 149
+MAX_STEPS = 63
 
 CAMERA_NAMES = ['left','right','gripper']
 
@@ -27,7 +27,7 @@ CAMERA_NAMES = ['left','right','gripper']
 # Task configuration
 TASK_CONFIG = {
     'dataset_dir': DATASET_DIR,
-    'episode_len': 750,
+    'episode_len':2000, # demo2: 850 demo3: 1000
     'state_dim': 8,
     'action_dim': 8,
     'cam_width': 640,
@@ -57,7 +57,7 @@ POLICY_CONFIG = {
 # Training configuration
 TRAIN_CONFIG = {
     'seed': 42,
-    'num_epochs': 50000,
+    'num_epochs': 100000,
     'batch_size_val': 8,
     'batch_size_train': 8,
     'eval_ckpt_name': 'policy_last.ckpt',

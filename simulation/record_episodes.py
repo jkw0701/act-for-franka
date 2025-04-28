@@ -72,7 +72,7 @@ class CameraController:
                 joint_angles.append(gripper_status)
                 self.joint_positions.append(joint_angles)
 
-                print(self.franka.gripper_state(),gripper_status )
+                #print(self.franka.gripper_state(),gripper_status )
 
 
 
@@ -157,7 +157,7 @@ class RobotTask:
         self.endpoint = np.array([0.44, 0.2, 0.05])
         self.operate_gripper(OPEN_GRIPPER_POSE, GRIPPER_FORCE)  
         self.gripper_width = OPEN_GRIPPER_POSE  
-        self.ori = np.array([np.pi, np.pi/2, 0.0, 0.0])
+        self.ori = np.array([np.pi, - np.pi/2, 0.0, 0.0])
 
 
     def reset_episode(self):
@@ -176,36 +176,39 @@ class RobotTask:
 
                 self.operate_gripper(OPEN_GRIPPER_POSE, GRIPPER_FORCE) # initialize gripper by opening it
 
+                self.new_x, self.new_y = self.index_to_grid_coord(self.success_count)
+                self.set_box_position(self.new_x, self.new_y, BOX_Z)
+
                 self.camera_controller.start_recording() # start recording
                 self.camera_controller.log_box_position(self.new_x, self.new_y, BOX_Z) # refernce to save the box position not necessary 
 
-                pre_pre_pick_pos, pre_pick_pos, pick_pos = self.update_box_pos2(self.new_x, self.new_y) 
-                
-                current_joint_angles = np.array(list(self.franka.angles()), dtype=np.float64)
-                solution = self.solve_kinematics(current_joint_angles, pre_pre_pick_pos, self.ori) # solve kinematics and get positions to publish
-                self.franka.move_to_joint_position_with_spline(solution.tolist(),duration=4.0)
+                while not self.check_success():
+                    new_x, new_y, new_z = self.get_box_position()
+                    pre_pre_pick_pos, pre_pick_pos, pick_pos = self.update_box_pos(new_x, new_y, new_z)
+                    
+                    #current_joint_angles = np.array(list(self.franka.angles()), dtype=np.float64)
+                    #solution = self.solve_kinematics(current_joint_angles, pre_pre_pick_pos, self.ori) # solve kinematics and get positions to publish
+                    #self.franka.move_to_joint_position_with_spline(solution.tolist(),duration=4.0)
 
-                current_joint_angles = np.array(list(self.franka.angles()), dtype=np.float64)
-                solution = self.solve_kinematics(current_joint_angles, pre_pick_pos, self.ori) # solve kinematics and get positions to publish
-                self.move(solution)
-                self.operate_gripper(OPEN_GRIPPER_POSE, GRIPPER_FORCE)
-                
-                if solution is None:
-                    self.reset_episode()
-                    continue
-                
-                if solution is None:
-                    self.reset_episode()
-                    continue
-                
-                ori = self.ori
-                solution = self.solve_kinematics(current_joint_angles, pick_pos, ori)
-                self.move(solution)
-                time.sleep(0.1)
-                self.camera_controller.gripper_width = GRASP
-                self.franka.grasp(0.024, 15)
-                self.move_up(pick_pos)
-                self.place_pose()
+                    current_joint_angles = np.array(list(self.franka.angles()), dtype=np.float64)
+                    solution = self.solve_kinematics(current_joint_angles, pre_pick_pos, self.ori) # solve kinematics and get positions to publish
+                    self.move(solution)
+                    self.operate_gripper(OPEN_GRIPPER_POSE, GRIPPER_FORCE)
+                    
+                    if solution is None:
+                        self.reset_episode()
+                        continue
+
+                    time.sleep(0.5)
+                    ori = self.ori
+                    solution = self.solve_kinematics(current_joint_angles, pick_pos, ori)
+                    self.move(solution)
+                    self.camera_controller.gripper_width = GRASP
+                    self.franka.grasp(0.024, 15)
+                    time.sleep(0.5)
+                    self.move_up(pick_pos)
+                    self.place_pose()
+
                 self.franka.move_to_joint_position_with_spline(self.initial_positions, duration=3.0, steps=750)
 
                 self.camera_controller.stop_recording(save=False)
@@ -219,8 +222,6 @@ class RobotTask:
                     self.camera_controller.log_failed_box_positions(self.new_x, self.new_y, BOX_Z)
                     print("\033[91mEpisode Failed\033[0m")
 
-                self.new_x, self.new_y = self.generate_cordinate()
-                self.set_box_position(self.new_x, self.new_y, BOX_Z)
 
     def set_box_position(self, x, y, z):
         rospy.wait_for_service('/gazebo/set_model_state')
@@ -233,22 +234,56 @@ class RobotTask:
         set_state(state_msg)
 
     def generate_cordinate(self):
-        box_length = 0.05
-        box_width = 0.05
+        
+        box_length = 0.2
+        box_width = 0.1
         # Position of the larger box (center coordinates)
-        box_x_center = 0.45
-        box_y_center = -0.21
-        cube_x = 0.015
-        cube_y = 0.032
+        box_x_center = 0.5
+        box_y_center = -0.2
+        cube_x = 0.04
+        cube_y = 0.04
         min_x = box_x_center - box_length / 2 + cube_x / 2
         max_x = box_x_center + box_length / 2 - cube_x / 2
         min_y = box_y_center - box_width / 2 + cube_y / 2
         max_y = box_y_center + box_width / 2 - cube_y / 2
-        
+        '''
+        min_x = 0.46
+        max_x = 0.55
+        min_y = -0.24
+        max_y = -0.21
+        '''
         x = random.uniform(min_x, max_x)
         y = random.uniform(min_y, max_y)
 
         return x , y
+    def index_to_grid_coord(self, index):
+
+        box_length = 0.2
+        box_width = 0.1
+        # Position of the larger box (center coordinates)
+        box_x_center = 0.5
+        box_y_center = -0.2
+        cube_x = 0.04
+        cube_y = 0.04
+        min_x = box_x_center - box_length / 2 + cube_x / 2
+        max_x = box_x_center + box_length / 2 - cube_x / 2
+        min_y = box_y_center - box_width / 2 + cube_y / 2
+        max_y = box_y_center + box_width / 2 - cube_y / 2
+        rows=6
+        cols=5
+        dx= (max_x-min_x) / cols
+        dy= (max_y-min_y) / rows
+
+        if index < 0:
+            raise ValueError("Index must be >= 0")
+
+        row = index // cols
+        col = index % cols
+
+        x = min_x + col * dx
+        y = min_y + row * dy
+
+        return x, y
 
     def set_box_position_from_input(self):
         print("Enter new box coordinates as x, y (e.g., -0.5, 0.5):")
@@ -262,19 +297,27 @@ class RobotTask:
             # self.new_x, self.new_y = 0, -0.2
             self.set_box_position(self.new_x, self.new_y, BOX_Z)
 
-    def update_box_pos(self, new_x, new_y):
-        z = BOX_Z
+    def update_box_pos(self, new_x, new_y, new_z):
+        z = new_z
         pre_pre_pick_pos = np.array([new_x, new_y - 0.23 , z + 0.23], dtype=np.float64)
-        pre_pick_pos = np.array([new_x, new_y - 0.01 , z + 0.1], dtype=np.float64)
-        pick_pos = np.array([new_x + 0.006, new_y - 0.002, z - 0.0135], dtype=np.float64)
+        pre_pick_pos = np.array([new_x, new_y , z + 0.1], dtype=np.float64)
+        pick_pos = np.array([new_x , new_y , z - 0.0165], dtype=np.float64)
         return pre_pre_pick_pos, pre_pick_pos, pick_pos
     
     def update_box_pos2(self, new_x, new_y):
         z = BOX_Z
         pre_pre_pick_pos = np.array([new_x, new_y - 0.23 , z + 0.23], dtype=np.float64)
         pre_pick_pos = np.array([new_x, new_y - 0.1 , z + 0.1], dtype=np.float64)
-        pick_pos = np.array([new_x, new_y - 0.0033, z - 0.0165], dtype=np.float64)
+        pick_pos = np.array([new_x, new_y - 0.001, z - 0.0165], dtype=np.float64)
         return pre_pre_pick_pos, pre_pick_pos, pick_pos    
+    
+    def get_box_position(self):
+        rospy.wait_for_service('/gazebo/get_model_state')
+        get_state = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
+        state_req = GetModelStateRequest(model_name='stone')
+        state_res = get_state(state_req)
+        return state_res.pose.position.x, state_res.pose.position.y, state_res.pose.position.z
+
     
     def move_up(self , pick_pose):
 
@@ -283,7 +326,6 @@ class RobotTask:
         self.franka.grasp(0.024 , 15) #그리퍼 안 놔
         pick_pose[2] += 0.1
         pick_pose[1] += 0.0
-
         solution = self.solve_kinematics(joint_positions ,pick_pose , self.ori)
         self.move(solution)
 
@@ -314,14 +356,11 @@ class RobotTask:
         return np.linalg.norm(self.endpoint - box_pos) < self.success_threshold
 
     def place_pose(self):
-        self.franka.grasp(0.024 , 15) #그리퍼 안 놔
         joint_positions = np.zeros(7)
-        pos = np.array([0.44, 0.21, 0.13])
+        pos = np.array([0.5, 0.2, 0.13])
         solution = self.solve_kinematics(joint_positions, pos, self.ori)
         self.move(solution)
-        self.franka.grasp(0.024 , 15) #그리퍼 안 놔
-
-        pos2 = np.array([0.44, 0.21, 0.05])
+        pos2 = np.array([0.5, 0.2, 0.017])
 
         solution2 = self.solve_kinematics(joint_positions, pos2, self.ori)
 
@@ -330,6 +369,12 @@ class RobotTask:
     
         self.franka.exec_gripper_cmd(OPEN_GRIPPER_POSE ,0.5)
         self.move(solution)
+
+        pos[2] += 0.8
+        #pos[1] -= 0.1
+        #pos[0] += 0.2
+        solution3 = self.solve_kinematics(joint_positions ,pos , self.ori)
+        self.move(solution3)
 
 def main():
     franka = RobotController()

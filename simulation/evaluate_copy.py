@@ -68,14 +68,10 @@ class Simulator:
         self.gripper_publisher = rospy.Publisher('/franka_gripper/move/goal', MoveActionGoal, queue_size=10)
         self.grasp_publisher = rospy.Publisher('/franka_gripper/grasp/goal', GraspActionGoal, queue_size=10)
 
-        for cn in self.cfg['camera_names']:
-            topic = {
-                'left': '/multisense_sl/camera/left/image_raw',
-                'right': '/multisense_sl/camera/right/image_raw',
-                'gripper': '/gripper_camera/image_raw'
-            }.get(cn, '/multisense_sl/camera/left/image_raw')
-
-            rospy.Subscriber(topic, Image, lambda msg, cn=cn: self.image_callback(msg, cn))
+        # 카메라 초기화
+        rospy.Subscriber('/multisense_sl/camera/left/image_raw', Image, self.left_callback)
+        rospy.Subscriber('/multisense_sl/camera/right/image_raw', Image, self.right_callback)
+        rospy.Subscriber('/gripper_camera/image_raw', Image, self.gripper_callback)
 
 
         self.policy_input_queue = Queue()
@@ -116,11 +112,27 @@ class Simulator:
                 positions[idx] = msg.position[pos_idx]
         self.current_positions = positions
 
-    def image_callback(self, msg, camera_name):
-        try:
-            self.image_cache[camera_name] = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-        except Exception as e:
-            rospy.logwarn(f"[IMAGE] Error converting image: {e}")
+
+    # 콜백 함수
+    def left_callback(self, msg):
+        self.store_image(msg, 'left')
+
+    def right_callback(self, msg):
+        self.store_image(msg, 'right')
+
+    def gripper_callback(self, msg):
+        self.store_image(msg, 'gripper')
+
+    # 저장 및 접근
+    def store_image(self, msg, camera_name):
+        self.image_cache[camera_name] = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+
+    def capture_all_images(self):
+        images = {}
+        for cn in self.cfg['camera_names']:
+            images[cn] = self.image_cache.get(cn, np.zeros((480, 640, 3), dtype=np.uint8))
+        self.image_cache.clear()
+        return images
 
     def angles(self):
         if self.current_positions is None:
@@ -187,6 +199,13 @@ class Simulator:
 
     def generate_coordinate(self):
         
+        box_length = 0.05
+        box_width = 0.05
+        # Position of the larger box (center coordinates)
+        box_x_center = 0.45
+        box_y_center = -0.21
+        cube_x = 0.015
+        cube_y = 0.032
         '''
         box_length = 0.4
         box_width = 0.2
@@ -195,15 +214,12 @@ class Simulator:
         box_y_center = -0.2
         cube_x = 0.04
         cube_y = 0.04
+        '''
+
         min_x = box_x_center - box_length / 2 + cube_x / 2
         max_x = box_x_center + box_length / 2 - cube_x / 2
         min_y = box_y_center - box_width / 2 + cube_y / 2
         max_y = box_y_center + box_width / 2 - cube_y / 2
-        '''
-        min_x = 0.45
-        max_x = 0.55
-        min_y = -0.24
-        max_y = -0.21
         
         x = random.uniform(min_x, max_x)
         y = random.uniform(min_y, max_y)
@@ -252,9 +268,6 @@ class Simulator:
         rate.sleep()
 
         #rospy.loginfo("Finished sending PID-controlled trajectory.")
-
-    def capture_image(self, camera_name):
-        return self.image_cache.get(camera_name, np.zeros((480, 640, 3), dtype=np.uint8))
     
     def policy_worker(self):
         while not rospy.is_shutdown():
@@ -280,7 +293,7 @@ class Simulator:
         with Progress() as progress:
             task = progress.add_task("[green]Running real-time simulation...", total=self.cfg['episode_len'])
             action_list = [] #csv에 저장할 액션리스트
-            hz = 50
+            hz = 40
             rate = rospy.Rate(hz)  # 30Hz 루프
             prev_time = time.time()
             all_actions = None  # ← simulate() 루프 안에서
@@ -294,9 +307,8 @@ class Simulator:
                 gripper_binary = 0 if gripper_width > 0.04 else 1
                 pos = np.append(qpos, gripper_binary)
 
-                images = {cn: self.capture_image(cn) for cn in self.cfg['camera_names']}
+                images = self.capture_all_images()
                 qpos_input = torch.from_numpy(self.pre_process(pos)).float().to(self.device).unsqueeze(0)
-                #qpos_history[:, t] = qpos_input
                 curr_image = get_image(images, self.cfg['camera_names'], self.device)
 
                 if t % query_frequency == 0:
@@ -312,7 +324,8 @@ class Simulator:
                     all_time_actions[[t_result], t_result:t_result+num_queries] = all_actions
                 
                 if self.policy_config['temporal_agg']:
-                    all_time_actions[[t], t:t+num_queries] = all_actions
+                    all_time_actions[[t_result], t_result:t_result+num_queries] = all_actions
+                    #all_time_actions[[t], t:t+num_queries] = all_actions
                     actions_for_curr_step = all_time_actions[:, t]
                     actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
                     actions_for_curr_step = actions_for_curr_step[actions_populated]
@@ -345,7 +358,7 @@ class Simulator:
                     #if t % 10 == 0:
                     threading.Thread(
                             target=self.async_pid_move, 
-                            args=(self.current_positions, joint_positions, 1 / hz + 0.05)
+                            args=(self.current_positions, joint_positions, 1/ hz + 0.03)
                         ).start()
                 #print("gripper action: ", gripper_action)
                 
@@ -359,10 +372,10 @@ class Simulator:
                     self.exec_gripper_cmd(0.08, GRIPPER_FORCE)
 
                 rate.sleep()
-                #now = time.time()
-                #dt = now - prev_time
-                #prev_time = now
-                #print(f"[{t}] 루프 주기: {dt:.4f} 초, {1/dt:.2f} Hz")
+                now = time.time()
+                dt = now - prev_time
+                prev_time = now
+                print(f"[{t}] 루프 주기: {dt:.4f} 초, {1/dt:.2f} Hz")
                 
 
             df = pd.DataFrame(action_list, columns = ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6", "joint7", "gripper"])
