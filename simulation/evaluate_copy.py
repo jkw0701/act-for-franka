@@ -216,7 +216,7 @@ class Simulator:
         cube_y = 0.04
         '''
 
-        min_x = box_x_center - box_length / 2 + cube_x / 2
+        min_x = box_x_center - box_length / 2 + cube_x / 2 + 0.1
         max_x = box_x_center + box_length / 2 - cube_x / 2
         min_y = box_y_center - box_width / 2 + cube_y / 2
         max_y = box_y_center + box_width / 2 - cube_y / 2
@@ -324,6 +324,7 @@ class Simulator:
                     all_time_actions[[t_result], t_result:t_result+num_queries] = all_actions
                 
                 if self.policy_config['temporal_agg']:
+                    #t_result = t_result - 12
                     all_time_actions[[t_result], t_result:t_result+num_queries] = all_actions
                     #all_time_actions[[t], t:t+num_queries] = all_actions
                     actions_for_curr_step = all_time_actions[:, t]

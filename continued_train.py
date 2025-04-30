@@ -1,0 +1,197 @@
+from settings.var import *
+
+import os
+import pickle
+import argparse
+from copy import deepcopy
+import matplotlib.pyplot as plt
+
+from training.utils import *
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--task', type=str, default='')
+args = parser.parse_args()
+task = args.task
+
+# configs
+task_cfg = TASK_CONFIG
+train_cfg = TRAIN_CONFIG
+policy_config = POLICY_CONFIG
+checkpoint_dir = os.path.join(train_cfg['checkpoint_dir'], task)
+
+# device
+device = os.environ['DEVICE']
+
+
+def forward_pass(data, policy):
+    image_data, qpos_data, action_data, is_pad = data
+    qpos_data = qpos_data.float()
+    action_data = action_data.float()
+    image_data, qpos_data, action_data, is_pad = image_data.to(device), qpos_data.to(device), action_data.to(device), is_pad.to(device)
+    return policy(qpos_data, image_data, action_data, is_pad) # TODO remove None
+
+
+def forward_pass(batch, policy):
+    image_data_list, qpos_data_list, action_data_list, is_pad_list = zip(*batch)
+
+    # ✅ 시퀀스 길이 맞추기
+    min_len = min(t.shape[0] for t in action_data_list)
+
+    # 자르기
+    image_data = torch.stack([img[:min_len] for img in image_data_list]).float().to(device)
+    qpos_data = torch.stack([q[:min_len] for q in qpos_data_list]).float().to(device)
+    action_data = torch.stack([a[:min_len] for a in action_data_list]).float().to(device)
+    is_pad = torch.stack([p[:min_len] for p in is_pad_list]).to(device)
+
+    return policy(qpos_data, image_data, action_data, is_pad)
+
+
+    
+def plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed):
+    # save training curves
+    for key in train_history[0]:
+        plot_path = os.path.join(ckpt_dir, f'train_val_{key}_seed_{seed}.png')
+        plt.figure()
+        train_values = [summary[key].item() for summary in train_history]
+        val_values = [summary[key].item() for summary in validation_history]
+        plt.plot(np.linspace(0, num_epochs-1, len(train_history)), train_values, label='train')
+        plt.plot(np.linspace(0, num_epochs-1, len(validation_history)), val_values, label='validation')
+        # plt.ylim([-0.1, 1])
+        plt.tight_layout()
+        plt.legend()
+        plt.title(key)
+        plt.savefig(plot_path)
+    print(f'Saved plots to {ckpt_dir}')
+
+
+def train_bc(train_dataloader, val_dataloader, policy_config):
+    # load policy
+    policy = make_policy(policy_config['policy_class'], policy_config)
+    policy.to(device)
+
+    # load optimizer
+    optimizer = make_optimizer(policy_config['policy_class'], policy)
+
+    # create checkpoint dir if not exists
+    os.makedirs(checkpoint_dir, exist_ok=True)
+
+    train_history = []
+    validation_history = []
+    min_val_loss = np.inf
+    best_ckpt_info = None
+
+
+    ckpt_files = [f for f in os.listdir(checkpoint_dir) if f.endswith('.ckpt') and 'epoch' in f] 
+
+    if ckpt_files: 
+        ckpt_files.sort(key=lambda x: int(x.split('_')[2]))
+        latest_ckpt = ckpt_files[-1]
+        start_iter = int(latest_ckpt.split('_')[2])+1
+
+        ckpt_path = os.path.join(checkpoint_dir, latest_ckpt)
+        print(f"Loading checkpoint from {ckpt_path}")
+        ckpt = torch.load(ckpt_path)
+        policy.load_state_dict(ckpt['policy_state_dict'])
+        train_history = ckpt['train_history']
+        validation_history = ckpt['validation_history']
+
+
+    else : 
+        start_iter = 0     
+
+    for epoch in range(start_iter, train_cfg['num_epochs']):
+        print(f'\nEpoch {epoch}')
+        # validation
+        with torch.inference_mode():
+            policy.eval()
+            epoch_dicts = []
+
+            for batch_idx, data in enumerate(val_dataloader):
+                forward_dict = forward_pass(data, policy)
+                epoch_dicts.append(forward_dict)
+            epoch_summary = compute_dict_mean(epoch_dicts)
+            validation_history.append(epoch_summary)
+
+            epoch_val_loss = epoch_summary['loss']
+            if epoch_val_loss < min_val_loss:
+                min_val_loss = epoch_val_loss
+                best_ckpt_info = (epoch, min_val_loss, deepcopy(policy.state_dict()))
+                
+        print(f'Val loss:   {epoch_val_loss:.5f}')
+        summary_string = ''
+        for k, v in epoch_summary.items():
+            summary_string += f'{k}: {v.item():.3f} '
+        print(summary_string)
+
+        # training
+        policy.train()
+        optimizer.zero_grad()
+
+        for batch_idx, data in enumerate(train_dataloader):
+            print("[INFO] batch_idx : ", batch_idx)
+            forward_dict = forward_pass(data, policy)
+            # backward
+            loss = forward_dict['loss']
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+            train_history.append(detach_dict(forward_dict))
+            # print("[INFO] train_history : ", train_history)
+
+        epoch_summary = compute_dict_mean(train_history[(batch_idx+1)*epoch:(batch_idx+1)*(epoch+1)])
+        epoch_train_loss = epoch_summary['loss']
+        print(f'Train loss: {epoch_train_loss:.5f}')
+        summary_string = ''
+        for k, v in epoch_summary.items():
+            summary_string += f'{k}: {v.item():.3f} '
+        print(summary_string)
+
+        if epoch % 200 == 0:
+            ckpt_path = os.path.join(checkpoint_dir, f"policy_epoch_{epoch}_seed_{train_cfg['seed']}.ckpt")
+            torch.save({'policy_state_dict' : policy.state_dict(),
+                        'train_history' : train_history,
+                        'validation_history': validation_history}
+                        , ckpt_path)
+            plot_history(train_history, validation_history, epoch, checkpoint_dir, train_cfg['seed'])
+
+    ckpt_path = os.path.join(checkpoint_dir, f'policy_last.ckpt')
+    torch.save(
+        {'policy_state_dict' : policy.state_dict(),
+         'train_history' : train_history,
+         'validation_history': validation_history}
+          , ckpt_path )
+    
+
+if __name__ == '__main__':
+    # set seed
+    set_seed(train_cfg['seed'])
+    # create ckpt dir if not exists
+    os.makedirs(checkpoint_dir, exist_ok=True)
+   # number of training episodes
+    data_dir = os.path.join(task_cfg['dataset_dir'], task)
+    num_episodes = len(os.listdir(data_dir))
+    print('Num of episodes : ',num_episodes)
+
+    # load data
+    train_dataloader, val_dataloader, stats, _ = load_data(data_dir, num_episodes, task_cfg['camera_names'],
+                                                            train_cfg['batch_size_train'], train_cfg['batch_size_val'])
+
+    # save stats
+    stats_path = os.path.join(checkpoint_dir, f'dataset_stats.pkl')
+    with open(stats_path, 'wb') as f:
+        pickle.dump(stats, f)
+
+
+    # train
+    train_bc(train_dataloader, val_dataloader, policy_config)
+
+
+    '''
+    The data loader is very important bcs we are pluging our input data here 
+
+    The data lodaer like an iterator or a smampler that samples each part of the data
+
+    were we will have the training data validation data and statastics which is just to normalize our data
+
+    '''

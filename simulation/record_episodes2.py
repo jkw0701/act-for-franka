@@ -170,12 +170,13 @@ class RobotTask:
         with Progress() as progress:
             task_id = progress.add_task("[green]Generating episodes...", total=10)
 
-            while self.success_count < 10:
+            while self.success_count < 20:
 
                 self.franka.initial_pose() # move robot to initial pose
 
                 joint_positions = np.zeros(7)
-                pos = np.array([0.5, 0.2, 0.13])
+                #pos = np.array([0.5, 0.2, 0.13]) #파란 박스 부근의 경우
+                pos = np.array([0.5, 0.0, 0.13]) #빨간 박스 부근의 경우
                 solution = self.solve_kinematics(joint_positions, pos, self.ori)
                 self.move(solution) 
                 self.operate_gripper(OPEN_GRIPPER_POSE, GRIPPER_FORCE) # initialize gripper by opening it
@@ -226,7 +227,6 @@ class RobotTask:
                     self.camera_controller.log_failed_box_positions(self.new_x, self.new_y, BOX_Z)
                     print("\033[91mEpisode Failed\033[0m")
 
-
     def set_box_position(self, x, y, z):
         rospy.wait_for_service('/gazebo/set_model_state')
         set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
@@ -237,33 +237,26 @@ class RobotTask:
         state_msg.model_state.pose.position.z = z
         set_state(state_msg)
 
-    def generate_cordinate(self):
-        
-        box_length = 0.2
-        box_width = 0.1
-        # Position of the larger box (center coordinates)
-        box_x_center = 0.5
-        box_y_center = -0.2
-        cube_x = 0.04
-        cube_y = 0.04
-        min_x = box_x_center - box_length / 2 + cube_x / 2
-        max_x = box_x_center + box_length / 2 - cube_x / 2
-        min_y = box_y_center - box_width / 2 + cube_y / 2
-        max_y = box_y_center + box_width / 2 - cube_y / 2
-        '''
-        min_x = 0.46
-        max_x = 0.55
-        min_y = -0.24
-        max_y = -0.21
-        '''
-        x = random.uniform(min_x, max_x)
-        y = random.uniform(min_y, max_y)
-
-        return x , y
     def index_to_grid_coord(self, index):
 
-        x = 0.5
-        y = -0.2 + index * 0.04
+        min_x = 0.48
+        max_x = 0.56
+        min_y = -0.225 #양끝단 부근의 떨어진 박스 잡으러 가기
+        max_y = 0.025  #빨간 박스는 중앙, 파란박스는 놓는 위치를 시작으로
+        #파랑:-0.025~0.125//빨강:-0.225~-0.025
+        rows=5
+        cols=4 #20
+        dx= (max_x-min_x) / cols #0.1/5 = 0.02
+        dy= (max_y-min_y) / rows #0.04/2 = 0.02
+
+        if index < 0:
+            raise ValueError("Index must be >= 0")
+
+        row = index // cols
+        col = index % cols
+
+        x = min_x + col * dx
+        y = min_y + row * dy
 
         return x, y
 
@@ -298,7 +291,7 @@ class RobotTask:
         get_state = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
         state_req = GetModelStateRequest(model_name='stone')
         state_res = get_state(state_req)
-        return state_res.pose.position.x, state_res.pose.position.y, state_res.pose.position.z
+        return state_res.pose.position.x, state_res.pose.position.y, BOX_Z - 0.011 #state_res.pose.position.z
 
     
     def move_up(self , pick_pose):
@@ -306,7 +299,7 @@ class RobotTask:
         joint_positions = np.zeros(7)
         # print(pick_pose.tolist())
         self.franka.grasp(0.024 , 15) #그리퍼 안 놔
-        pick_pose[2] += 0.1
+        pick_pose[2] += 0.13
         pick_pose[1] += 0.0
         solution = self.solve_kinematics(joint_positions ,pick_pose , self.ori)
         self.move(solution)

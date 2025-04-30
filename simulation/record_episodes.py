@@ -265,14 +265,14 @@ class RobotTask:
         box_y_center = -0.2
         cube_x = 0.04
         cube_y = 0.04
-        min_x = box_x_center - box_length / 2 + cube_x / 2
-        max_x = box_x_center + box_length / 2 - cube_x / 2
-        min_y = box_y_center - box_width / 2 + cube_y / 2
-        max_y = box_y_center + box_width / 2 - cube_y / 2
-        rows=6
-        cols=5
-        dx= (max_x-min_x) / cols
-        dy= (max_y-min_y) / rows
+        min_x = box_x_center - box_length / 2 + cube_x / 2 + 0.06 # 0.48
+        max_x = box_x_center + box_length / 2 - cube_x / 2 # 0.58
+        min_y = box_y_center - box_width / 2 + cube_y / 2  # 0.23
+        max_y = box_y_center + box_width / 2 - cube_y / 2  # 0.17
+        rows=3
+        cols=5 #15
+        dx= (max_x-min_x) / cols #0.1/5 = 0.02
+        dy= (max_y-min_y) / rows #0.06/3  = 0.02
 
         if index < 0:
             raise ValueError("Index must be >= 0")
@@ -280,8 +280,8 @@ class RobotTask:
         row = index // cols
         col = index % cols
 
-        x = min_x + col * dx
-        y = min_y + row * dy
+        x = min_x + col * dx + 0.01 #틸트해서 학습 + 0.005 학습
+        y = min_y + row * dy + 0.01
 
         return x, y
 
@@ -301,7 +301,7 @@ class RobotTask:
         z = new_z
         pre_pre_pick_pos = np.array([new_x, new_y - 0.23 , z + 0.23], dtype=np.float64)
         pre_pick_pos = np.array([new_x, new_y , z + 0.1], dtype=np.float64)
-        pick_pos = np.array([new_x , new_y , z - 0.0165], dtype=np.float64)
+        pick_pos = np.array([new_x + 0.002, new_y , z - 0.0165], dtype=np.float64)
         return pre_pre_pick_pos, pre_pick_pos, pick_pos
     
     def update_box_pos2(self, new_x, new_y):

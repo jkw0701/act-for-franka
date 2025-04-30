@@ -7,7 +7,7 @@ if torch.cuda.is_available():
 os.environ['DEVICE'] = device
 
 # Paths
-CHECKPOINT_DIR = '/home/namyoon/ACTfranka/demo4/checkpoints'
+CHECKPOINT_DIR = '/home/namyoon/ACTfranka/demo6/checkpoints'
 DATASET_DIR = "/home/namyoon/ACTfranka/real_dir2/processed"
 
 # Initial configuration
@@ -16,7 +16,7 @@ OPEN_GRIPPER_POSE = 0.08
 GRASP = 0.041
 GRIPPER_FORCE = 1
 INITIAL_GRIPPER_POSE = 0.06
-TOTAL_EPISODES = 30
+TOTAL_EPISODES = 15
 BOX_Z = 0.04
 MAX_STEPS = 63
 
@@ -27,7 +27,7 @@ CAMERA_NAMES = ['left','right','gripper']
 # Task configuration
 TASK_CONFIG = {
     'dataset_dir': DATASET_DIR,
-    'episode_len':2000, # demo2: 850 demo3: 1000
+    'episode_len':1000, # demo2: 850 demo3: 1000
     'state_dim': 8,
     'action_dim': 8,
     'cam_width': 640,

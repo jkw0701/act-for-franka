@@ -1,26 +1,21 @@
 import torch
-import gc
 import numpy as np
 import pandas as pd 
 import random
 import rospy
 import pickle
-import csv
 import os
 import time
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from gazebo_msgs.srv import GetModelState, GetModelStateRequest
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from franka_core_msgs.msg import JointCommand
 from sensor_msgs.msg import JointState
 from franka_gripper.msg import MoveActionGoal, GraspAction, GraspActionGoal, GraspGoal, GraspEpsilon
 
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
-
-from panda_kinematics import PandaWithPumpKinematics
-from settings.var import GRIPPER_FORCE, BOX_Z, POLICY_CONFIG, TASK_CONFIG, TRAIN_CONFIG
+from settings.var import GRIPPER_FORCE, BOX_Z, POLICY_CONFIG, TASK_CONFIG, TRAIN_CONFIG, GRASP
 from gazebo_msgs.srv import SetModelState, SetModelStateRequest
 from rich.progress import Progress
 from training.utils import make_policy, get_image
@@ -187,27 +182,22 @@ class Simulator:
 
     def generate_coordinate(self):
         
-        '''
-        box_length = 0.4
-        box_width = 0.2
+        box_length = 0.2
+        box_width = 0.1
         # Position of the larger box (center coordinates)
-        box_x_center = 0.4
+        box_x_center = 0.5
         box_y_center = -0.2
         cube_x = 0.04
         cube_y = 0.04
-        min_x = box_x_center - box_length / 2 + cube_x / 2
-        max_x = box_x_center + box_length / 2 - cube_x / 2
-        min_y = box_y_center - box_width / 2 + cube_y / 2
-        max_y = box_y_center + box_width / 2 - cube_y / 2
-        '''
-        min_x = 0.45
-        max_x = 0.55
-        min_y = -0.24
-        max_y = -0.21
+        min_x = box_x_center - box_length / 2 + cube_x / 2 + 0.06 # 0.48
+        max_x = box_x_center + box_length / 2 - cube_x / 2 - 0.02# 0.58
+        min_y = box_y_center - box_width / 2 + cube_y / 2  # 0.23
+        max_y = box_y_center + box_width / 2 - cube_y / 2  # 0.17
         
         x = random.uniform(min_x, max_x)
         y = random.uniform(min_y, max_y)
-
+        x = 0.5
+        y = -0.2
         return x , y
 
     def async_pid_move(self, current, target, duration):
@@ -290,8 +280,14 @@ class Simulator:
 
                 qpos = self.angles()
                 gripper_width = self.gripper_state()
+                
                 #print(gripper_width)
-                gripper_binary = 0 if gripper_width > 0.04 else 1
+                if gripper_width < 0.033: # and t % 100 == 0:  #못잡을시 강제 개방코드
+                    self.exec_gripper_cmd(0.08, GRIPPER_FORCE)
+                    print("--------------------------못잡음")
+                    rospy.sleep(0.5)
+                
+                gripper_binary = 0 if gripper_width > GRASP else 1
                 pos = np.append(qpos, gripper_binary)
 
                 images = {cn: self.capture_image(cn) for cn in self.cfg['camera_names']}
@@ -313,7 +309,7 @@ class Simulator:
                 
                 if self.policy_config['temporal_agg']:
                     all_time_actions[[t], t:t+num_queries] = all_actions
-                    actions_for_curr_step = all_time_actions[:, t]
+                    actions_for_curr_step = all_time_actions[:, t+5] # 선행 앙상블 기법 (t + 9)
                     actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
                     actions_for_curr_step = actions_for_curr_step[actions_populated]
                     k = 0.001
@@ -330,8 +326,8 @@ class Simulator:
                 self.current_positions = self.angles()
 
                 joint_positions = action[:7]
-                #print(joint_positions)
                 gripper_action = action[7]
+                #print(joint_positions)
 
                 position_error = max(np.abs(np.array(joint_positions) - np.array(self.current_positions)))
                 #print("------------------가야하는 거리" , position_error)
@@ -341,6 +337,7 @@ class Simulator:
                     #joint_positions = (self.current_positions + 0.1* joint_positions) / 1.1
                     joint_positions = self.current_positions
                     print(f"Position error too large: {position_error}")
+
                 else:
                     #if t % 10 == 0:
                     threading.Thread(
@@ -363,10 +360,6 @@ class Simulator:
                 #dt = now - prev_time
                 #prev_time = now
                 #print(f"[{t}] 루프 주기: {dt:.4f} 초, {1/dt:.2f} Hz")
-                
-
-            df = pd.DataFrame(action_list, columns = ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6", "joint7", "gripper"])
-            df.to_csv('actions_0414_1418.csv', index=False)
 
 if __name__ == "__main__":
     #rospy.init_node("real_time_simulator")
