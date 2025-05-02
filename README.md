@@ -1,7 +1,7 @@
 # ACTFranka_jkw : Action Chunking with Transformer on Franka Panda
 
 This Repository provides the [**ACT (Action Chunking with Transfomer)**](https://github.com/tonyzhaozh/act) Algorithms to the **Franka Emika Panda Research Robot Arms** for performing multiple manipulation tasks.
-The system was developed for both simulation and real-world environments, and its result was verified through a series of experiments in both settings.
+The system was developed for both <ins>simulation</ins> and <ins>real-world</ins> environments, and its result was verified through a series of experiments in both settings.
 
 ### Credits 
 > The Simulation environment was derived from **[ACTfranka](https://github.com/sainavaneet/ACTfranka)**, But several modifications were made to suit our tasks and architecture.
