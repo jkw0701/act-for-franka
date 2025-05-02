@@ -38,10 +38,10 @@ A step-by-step guide to running ACT in both gazebo simulation and real-world set
 - [Evaluation](https://github.com/jkw0701/ACTFranka_jkw/blob/kny/simulation/evaluate.py)
   
 ### Real-World
-- [Requirements](url 채우기)
-- [Record Episodes](url 채우기)
-- [Training](url 채우기)
-- [Evaluation](url 채우기) 
+- [Requirements](나중 readme url로 채우기)
+- [Record Episodes](https://github.com/jkw0701/ACTFranka_jkw/blob/real-world/real/live_record_mod.py)
+- [Training](https://github.com/jkw0701/ACTFranka_jkw/blob/real-world/train.py)
+- [Evaluation](https://github.com/jkw0701/ACTFranka_jkw/blob/real-world/real/real_eval.py) 
 <br />
 
 ## Experiments 
