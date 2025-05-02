@@ -12,3 +12,4 @@ matplotlib
 pyquaternion
 opencv-python
 dynamixel-sdk
+torch

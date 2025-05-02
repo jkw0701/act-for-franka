@@ -7,8 +7,8 @@ if torch.cuda.is_available():
 os.environ['DEVICE'] = device
 
 # Paths
-CHECKPOINT_DIR = '/home/namyoon/ACTfranka/demo6/checkpoints'
-DATASET_DIR = "/home/namyoon/ACTfranka/real_dir2/processed"
+CHECKPOINT_DIR = '/home/namyoon/demo5/checkpoints'
+DATASET_DIR = "/home/namyoon/real_dir2/processed"
 
 # Initial configuration
 INITIAL_JOINTS = [0, -0.7, 0, -2.35619449, 0, 1.57079632679, 0.785398163397]

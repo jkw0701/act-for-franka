@@ -7,7 +7,7 @@ import numpy as np
 import actionlib
 
 import sys
-sys.path.append('/home/namyoon/ros/ws_ACTfranka/devel/lib/python3/dist-packages')
+sys.path.append('~/ros/ws_ACTfranka/devel/lib/python3/dist-packages')
 
 from franka_core_msgs.msg import JointCommand
 
