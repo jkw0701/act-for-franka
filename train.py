@@ -58,7 +58,7 @@ def plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed):
         plt.plot(np.linspace(0, num_epochs-1, len(train_history)), train_values, label='train')
         plt.plot(np.linspace(0, num_epochs-1, len(validation_history)), val_values, label='validation')
         # plt.ylim([-0.1, 1])
-        plt.tight_layout()
+        plt.tight_lfayout()
         plt.legend()
         plt.title(key)
         plt.savefig(plot_path)
@@ -79,9 +79,26 @@ def train_bc(train_dataloader, val_dataloader, policy_config):
     train_history = []
     validation_history = []
     min_val_loss = np.inf
-    best_ckpt_info = None
 
-    for epoch in range(train_cfg['num_epochs']):
+    ckpt_files = [f for f in os.listdir(checkpoint_dir) if f.endswith('.ckpt') and 'epoch' in f] 
+
+    if ckpt_files: 
+        ckpt_files.sort(key=lambda x: int(x.split('_')[2]))
+        latest_ckpt = ckpt_files[-1]
+        start_iter = int(latest_ckpt.split('_')[2])+1
+
+        ckpt_path = os.path.join(checkpoint_dir, latest_ckpt)
+        print(f"Loading checkpoint from {ckpt_path}")
+        ckpt = torch.load(ckpt_path)
+        policy.load_state_dict(ckpt['policy_state_dict'])
+        train_history = ckpt['train_history']
+        validation_history = ckpt['validation_history']
+
+
+    else : 
+        start_iter = 0     
+
+    for epoch in range(start_iter, train_cfg['num_epochs']):
         print(f'\nEpoch {epoch}')
         # validation
         with torch.inference_mode():
@@ -97,7 +114,6 @@ def train_bc(train_dataloader, val_dataloader, policy_config):
             epoch_val_loss = epoch_summary['loss']
             if epoch_val_loss < min_val_loss:
                 min_val_loss = epoch_val_loss
-                best_ckpt_info = (epoch, min_val_loss, deepcopy(policy.state_dict()))
                 
         print(f'Val loss:   {epoch_val_loss:.5f}')
         summary_string = ''
@@ -118,6 +134,7 @@ def train_bc(train_dataloader, val_dataloader, policy_config):
             optimizer.step()
             optimizer.zero_grad()
             train_history.append(detach_dict(forward_dict))
+            # print("[INFO] train_history : ", train_history)
 
         epoch_summary = compute_dict_mean(train_history[(batch_idx+1)*epoch:(batch_idx+1)*(epoch+1)])
         epoch_train_loss = epoch_summary['loss']
@@ -129,11 +146,18 @@ def train_bc(train_dataloader, val_dataloader, policy_config):
 
         if epoch % 200 == 0:
             ckpt_path = os.path.join(checkpoint_dir, f"policy_epoch_{epoch}_seed_{train_cfg['seed']}.ckpt")
-            torch.save(policy.state_dict(), ckpt_path)
+            torch.save({'policy_state_dict' : policy.state_dict(),
+                        'train_history' : train_history,
+                        'validation_history': validation_history}
+                        , ckpt_path)
             plot_history(train_history, validation_history, epoch, checkpoint_dir, train_cfg['seed'])
 
     ckpt_path = os.path.join(checkpoint_dir, f'policy_last.ckpt')
-    torch.save(policy.state_dict(), ckpt_path)
+    torch.save(
+        {'policy_state_dict' : policy.state_dict(),
+         'train_history' : train_history,
+         'validation_history': validation_history}
+          , ckpt_path )
     
 
 if __name__ == '__main__':
