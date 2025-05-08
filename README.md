@@ -46,7 +46,13 @@ A step-by-step guide to running ACT in both gazebo simulation and real-world set
 
 ## Experiments 
 ### Simulation 
+[record videos in gazebo simulation] (https://github.com/jkw0701/act_for_franka/releases/download/video/ACTFranka_sim_record.mp4)
+[evaluate in gazebo simulation] (https://github.com/jkw0701/act_for_franka/releases/download/video/ACTfranka_sim_evaluate.mp4)
+
 ### Real-World
+[record videos in real-world] (https://github.com/jkw0701/act_for_franka/releases/download/real_video/ACTFranka_real_record.mp4)
+[evaluate in gazebo simulation] (https://github.com/jkw0701/act_for_franka/releases/download/real_video/ACTFranka_real_eval.mp4)
+[evaluate in gazebo simulation] (https://github.com/jkw0701/act_for_franka/releases/download/real_video/ACTFranka_real_eval_diff_clr.mp4)
 <br />
 
 ## About 
