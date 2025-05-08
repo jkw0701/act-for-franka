@@ -61,6 +61,9 @@ A step-by-step guide to running ACT in both gazebo simulation and real-world set
 <img src="https://github.com/user-attachments/assets/9afc0901-65c8-414a-88ab-52aa134e45d1" alt="evaluate in gazebo" width="570" height="380"/>
 
 
+---
+
+
 ### Real-World
 
 
