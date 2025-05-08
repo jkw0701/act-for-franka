@@ -48,30 +48,39 @@ A step-by-step guide to running ACT in both gazebo simulation and real-world set
 ### Simulation 
 
 
-* Record Episode
-<img src="https://github.com/user-attachments/assets/e98f318c-92e6-4ec3-803f-a535ed17d651" alt="record in gazebo" width="570" height="380"/>
-<br />
+**`Record Episode`**
 
-* Evaluate
+
+<img src="https://github.com/user-attachments/assets/e98f318c-92e6-4ec3-803f-a535ed17d651" alt="record in gazebo" width="570" height="380"/>
+
+
+
+**`Evaluate`**
+
+
 <img src="https://github.com/user-attachments/assets/9afc0901-65c8-414a-88ab-52aa134e45d1" alt="evaluate in gazebo" width="570" height="380"/>
+
 
 ### Real-World
 
-* Record Episode
+
+**`Record Episode`**
 
   
 https://github.com/user-attachments/assets/2e42247b-fa25-49c3-ab0f-ac18bd06ea19
 
-* Evaluate
+
+**`Evaluate (Same Box Color as Recording)`**
 
   
 https://github.com/user-attachments/assets/09a474c4-1821-4dbe-bf42-105b2e3d501a
 
-* Evaluate
+
+**`Evaluate (Different Box Color)`** 
 
   
 https://github.com/user-attachments/assets/5a200755-d5c3-4643-a677-b870d9c4087c
-<br />
+
 
 ## About 
 ### Related 
