@@ -46,13 +46,13 @@ A step-by-step guide to running ACT in both gazebo simulation and real-world set
 
 ## Experiments 
 ### Simulation 
-[record videos in gazebo simulation] (https://github.com/jkw0701/act_for_franka/releases/download/video/ACTFranka_sim_record.mp4)
-[evaluate in gazebo simulation] (https://github.com/jkw0701/act_for_franka/releases/download/video/ACTfranka_sim_evaluate.mp4)
+![record videos in gazebo simulation](https://github.com/user-attachments/assets/cc8b541b-66fa-443d-922a-480361df50bc)
+![evaluate in gazebo simulation](https://github.com/user-attachments/assets/1dc99504-630e-440e-8426-7806122326e8)
 
 ### Real-World
-[record videos in real-world] (https://github.com/jkw0701/act_for_franka/releases/download/real_video/ACTFranka_real_record.mp4)
-[evaluate in gazebo simulation] (https://github.com/jkw0701/act_for_franka/releases/download/real_video/ACTFranka_real_eval.mp4)
-[evaluate in gazebo simulation] (https://github.com/jkw0701/act_for_franka/releases/download/real_video/ACTFranka_real_eval_diff_clr.mp4)
+![record videos in real-world](https://github.com/user-attachments/assets/2e42247b-fa25-49c3-ab0f-ac18bd06ea19)
+![evaluate in gazebo simulation](https://github.com/user-attachments/assets/09a474c4-1821-4dbe-bf42-105b2e3d501a)
+![evaluate in gazebo simulation](https://github.com/user-attachments/assets/5a200755-d5c3-4643-a677-b870d9c4087c)
 <br />
 
 ## About 
