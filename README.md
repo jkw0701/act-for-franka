@@ -32,16 +32,16 @@ To run this project, ensure the following tools and hardware system are availabl
 A step-by-step guide to running ACT in both gazebo simulation and real-world settings. 
 
 ### Simulation
-- [Requirements](나중 readme url로 채우기)
+- [Requirements](나중 readme url로 채우)
 - [Record Episodes](https://github.com/jkw0701/ACTFranka_jkw/blob/kny/simulation/record_episodes.py)
 - [Training](https://github.com/jkw0701/ACTFranka_jkw/blob/kny/continued_train.py)
 - [Evaluation](https://github.com/jkw0701/ACTFranka_jkw/blob/kny/simulation/evaluate.py)
   
 ### Real-World
-- [Requirements](나중 readme url로 채우기)
-- [Record Episodes](https://github.com/jkw0701/ACTFranka_jkw/blob/real-world/real/live_record_mod.py)
-- [Training](https://github.com/jkw0701/ACTFranka_jkw/blob/real-world/train.py)
-- [Evaluation](https://github.com/jkw0701/ACTFranka_jkw/blob/real-world/real/real_eval.py) 
+- [Setup Requirements](https://github.com/jkw0701/act_for_franka/blob/real-world/README.md#setup)
+- [Record Episodes](https://github.com/jkw0701/act_for_franka/blob/real-world/README.md#record-videos)
+- [Training](https://github.com/jkw0701/act_for_franka/blob/real-world/README.md#train)
+- [Evaluation](https://github.com/jkw0701/act_for_franka/blob/real-world/README.md#evaluate) 
 <br />
 
 ## Experiments 
