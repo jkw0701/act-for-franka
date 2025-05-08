@@ -46,13 +46,31 @@ A step-by-step guide to running ACT in both gazebo simulation and real-world set
 
 ## Experiments 
 ### Simulation 
-![record videos in gazebo simulation](https://github.com/user-attachments/assets/cc8b541b-66fa-443d-922a-480361df50bc)
-![evaluate in gazebo simulation](https://github.com/user-attachments/assets/1dc99504-630e-440e-8426-7806122326e8)
+
+
+* Record Episode
+<img src="https://github.com/user-attachments/assets/e98f318c-92e6-4ec3-803f-a535ed17d651" alt="record in gazebo" width="570" height="380"/>
+<br />
+
+* Evaluate
+<img src="https://github.com/user-attachments/assets/9afc0901-65c8-414a-88ab-52aa134e45d1" alt="evaluate in gazebo" width="570" height="380"/>
 
 ### Real-World
-![record videos in real-world](https://github.com/user-attachments/assets/2e42247b-fa25-49c3-ab0f-ac18bd06ea19)
-![evaluate in gazebo simulation](https://github.com/user-attachments/assets/09a474c4-1821-4dbe-bf42-105b2e3d501a)
-![evaluate in gazebo simulation](https://github.com/user-attachments/assets/5a200755-d5c3-4643-a677-b870d9c4087c)
+
+* Record Episode
+
+  
+https://github.com/user-attachments/assets/2e42247b-fa25-49c3-ab0f-ac18bd06ea19
+
+* Evaluate
+
+  
+https://github.com/user-attachments/assets/09a474c4-1821-4dbe-bf42-105b2e3d501a
+
+* Evaluate
+
+  
+https://github.com/user-attachments/assets/5a200755-d5c3-4643-a677-b870d9c4087c
 <br />
 
 ## About 
