@@ -81,7 +81,7 @@ $ source devel/setup.bash
 
 **3. In the ACT repository**
 ```bash
-  $ cd ros/ws_ACTfranka/simulatin
+  $ cd act_for_franka/sim/simulatin
   $ python record_episode.py
 ```
 
@@ -93,7 +93,7 @@ $ source devel/setup.bash
 
 
 ```bash
-  $ cd ros/ws_ACTfranka
+  $ cd act_for_franka/sim
   $ python train.py
 ```
 
@@ -103,7 +103,7 @@ $ source devel/setup.bash
 
 
 ```bash
-  $ cd ros/ws_ACTfranka
+  $ cd act_for_franka/sim/simulation
   $ python evaluate.py
 ```
 
