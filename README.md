@@ -1,66 +1,105 @@
+# act_for_franka on Simulation
 
-# ACTFranka: Action chunk transformer on franka robot
+This branch enables the application of **[ACT (Action Chunking with Transformer)](https://tonyzhaozh.github.io/aloha/)** to the real-world Franka Panda robot. It specifically uses the **Franka Panda Research 3** model.
 
-**Welcome to the ACTFranka repository, designed for the Franka robot. This guide covers both simulated and real-world environment setups, and includes utilities for environment setup, training, and inference.**
+## Quick Start
 
-We have modified the original ACT code from [this repo](https://github.com/tonyzhaozh/act.git) to complete this project, enhancing its capabilities to better suit our specific application needs.
+To reproduce our simulation results with the Franka Panda Research3 using ACT, follow the steps below. 
+
+### Environments
+
+* **Operating System** - [Ubuntu 20.04 LTS](https://releases.ubuntu.com/focal/)
+* **ROS1 Noetic** - For robot communication and control
+* **Gazebo 11** - For simulation
+  
+* **Simulation enviroment**
+  > **2** x <ins>multisense_sl</ins> (RGB Only) - Left and right viewpoints\
+  > **1** x <ins>gripper_camera</ins> (RGB)- Top viewpoints\
+  > <ins>stone, red_plate, blue_plate</ins> - pick green stone on red plate to blue plate
 
 
-> **website** - https://sainavaneet.github.io/ACTfranka.github.io/
+---
 
-## 📋 Prerequisites
-Ensure you have the following installed:
-- **Ubuntu 20.04**
-- **ROS Noetic**
-- **`libfranka`** package for Franka robot control
 
-## 🚀 Installation
-To get started with the ACT imitation learning framework, follow these steps:
+### Setup 
+
+
+Follow the steps below to complete the installation on your PC.
+
+
+**1. Create Conda Environment**
+> While not strictly required, we recommend creating a virtual environment to avoid potential version conflicts with your system.
+```bash
+  $ conda create --name act4fr3sim python=3.8.10
+  $ conda activate act4fr3sim
+```
+
+
+**2. Install Python Requirements**
 
 ```bash
-git clone https://github.com/sainavaneet/ACTfranka.git
-cd ACTfranka
-pip install -r requirments.txt
+  $ pip install -r requirements.txt
 ```
 
-## 🗂 Project Structure
-- `controller/`: Contains robot control code modules including movement and state management.
-- `settings/`: Houses configuration files for dataset paths and hyperparameters.
-- `simulation/`: Scripts for recording episodes and evaluating models are here.
-- `train.py`: The main script to train the policy using ACT imitation learning.
-- `real_robot/`: Specialized scripts for deploying the model on an actual Franka robot.
 
-## 🏗 Step 1: Create the Environment
-1. **Setup a simulated environment** in Gazebo using the Franka robot and the `libfranka` package.
-2. LINK : https://drive.google.com/uc?id=1yIaI9Ndl1dIDdq8fLU3-7SlktDi84qVf
-3. **Record episodes** using the script located at `simulation/record_episodes.py`.
-   - Make sure the dataset path is correctly set in `settings/var.py`.
+**3. Clone `act_for_franka` Repository (sim branch)**
 
-### Dataset Format
-The dataset should be structured in HDF5 format as follows:
-```
-HDF5 file contents:
-- action: <HDF5 dataset "action": shape (149, 8), type "<f8">
-- observations:
-  - images:
-    - top: <HDF5 dataset "top": shape (149, 480, 640, 3), type "|u1">
-  - qpos: <HDF5 dataset "qpos": shape (149, 8), type "<f8">
+```bash
+  $ mkdir act_for_franka/sim
+  $ cd act_for_franka/sim
+  $ git clone -b sim https://github.com/jkw0701/act_for_franka.git
 ```
 
-### Replay Episodes
-Utilize the Jupyter notebook `dataset_prepare/replay.ipynb` to replay recorded episodes by specifying the episode path.
 
-## 🏋️ Step 2: Train the Model
-1. Configure the necessary hyperparameters in `settings/var.py`.
-2. Execute the `train.py` script with the prepared dataset to generate the policy.
+**4. Download Franka ROS Workspace** 
 
-## 🤖 Step 3: Model Inference
-1. **Load and evaluate the trained policy** using the script `simulation/evaluate.py`.
-2. This process simulates how the Franka robot will perform the learned tasks in a controlled environment.
+> A pre-built Franka ROS workspace is provided via [Google Drive](https://drive.google.com/file/d/19SXBxrk2MRcsHXWO2sJT7QOOudFGGgxg/view?usp=sharing)
+locate workspace to ros/ws_ACTfranka and build
+```bash
+$ cd ros/ws_ACTfranka
+$ catkin_make
+```
 
-## 🌍 Real Robot Deployment
-To deploy on a real Franka robot, navigate to the `real_robot` directory. Scripts here are specifically adapted for real-world operations of the Franka robot.
+**6. Launch `roscore` and Source Franka ROS Workspace**
+```bash
+$ roscore
+$ cd ros/ws_ACTfranka
+$ source devel/setup.bash
+```
 
-## 🆘 Support
-For any issues or further questions, please open an issue on the [GitHub repository](https://github.com/sainavaneet/ACTfranka).
+---
+
+
+### Record Videos
+
+**1. In the Franka ROS Workspace**
+```bash
+  $ cd ros/ws_ACTfranka
+  $ roslaunch panda_gazebo pick_and_place.launch
+```
+
+
+**3. In the ACT repository**
+```bash
+  $ cd ros/ws_ACTfranka/simulatin
+  $ python record_episode.py
+```
+
+
+---
+
+
+### Train 
+
+
+```bash
+  $ cd ros/ws_ACTfranka
+  $ python train.py
+```
+
+
+---
+
+
+### Evaluate 
 
