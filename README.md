@@ -98,8 +98,12 @@ $ source devel/setup.bash
 ```
 
 
----
-
 
 ### Evaluate 
+
+
+```bash
+  $ cd ros/ws_ACTfranka
+  $ python evaluate.py
+```
 
