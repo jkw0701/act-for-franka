@@ -47,7 +47,7 @@ Follow the steps below to complete the installation on your PC.
 ```bash
   $ mkdir act_for_franka/sim
   $ cd act_for_franka/sim
-  $ git clone -b sim https://github.com/jkw0701/act_for_franka.git
+  $ git clone -b kny https://github.com/jkw0701/act_for_franka.git
 ```
 
 
