@@ -32,10 +32,10 @@ To run this project, ensure the following tools and hardware system are availabl
 A step-by-step guide to running ACT in both gazebo simulation and real-world settings. 
 
 ### Simulation
-- [Requirements](나중 readme url로 채우)
-- [Record Episodes](https://github.com/jkw0701/ACTFranka_jkw/blob/sim/simulation/record_episodes.py)
-- [Training](https://github.com/jkw0701/ACTFranka_jkw/blob/sim/continued_train.py)
-- [Evaluation](https://github.com/jkw0701/ACTFranka_jkw/blob/sim/simulation/evaluate.py)
+- [Requirements](https://github.com/jkw0701/act_for_franka/blob/sim/README.md#setup)
+- [Record Episodes](https://github.com/jkw0701/act_for_franka/blob/sim/README.md#record-videos)
+- [Training](https://github.com/jkw0701/act_for_franka/blob/sim/README.md#train)
+- [Evaluation](https://github.com/jkw0701/act_for_franka/blob/sim/simulation/README.md#evaluate)
   
 ### Real-World
 - [Setup Requirements](https://github.com/jkw0701/act_for_franka/blob/real/README.md#setup)
