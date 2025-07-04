@@ -33,15 +33,15 @@ A step-by-step guide to running ACT in both gazebo simulation and real-world set
 
 ### Simulation
 - [Requirements](나중 readme url로 채우)
-- [Record Episodes](https://github.com/jkw0701/ACTFranka_jkw/blob/kny/simulation/record_episodes.py)
-- [Training](https://github.com/jkw0701/ACTFranka_jkw/blob/kny/continued_train.py)
-- [Evaluation](https://github.com/jkw0701/ACTFranka_jkw/blob/kny/simulation/evaluate.py)
+- [Record Episodes](https://github.com/jkw0701/ACTFranka_jkw/blob/sim/simulation/record_episodes.py)
+- [Training](https://github.com/jkw0701/ACTFranka_jkw/blob/sim/continued_train.py)
+- [Evaluation](https://github.com/jkw0701/ACTFranka_jkw/blob/sim/simulation/evaluate.py)
   
 ### Real-World
-- [Setup Requirements](https://github.com/jkw0701/act_for_franka/blob/real-world/README.md#setup)
-- [Record Episodes](https://github.com/jkw0701/act_for_franka/blob/real-world/README.md#record-videos)
-- [Training](https://github.com/jkw0701/act_for_franka/blob/real-world/README.md#train)
-- [Evaluation](https://github.com/jkw0701/act_for_franka/blob/real-world/README.md#evaluate) 
+- [Setup Requirements](https://github.com/jkw0701/act_for_franka/blob/real/README.md#setup)
+- [Record Episodes](https://github.com/jkw0701/act_for_franka/blob/real/README.md#record-videos)
+- [Training](https://github.com/jkw0701/act_for_franka/blob/real/README.md#train)
+- [Evaluation](https://github.com/jkw0701/act_for_franka/blob/real/README.md#evaluate) 
 <br />
 
 ## Experiments 
