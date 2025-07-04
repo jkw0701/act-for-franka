@@ -85,7 +85,7 @@ $ source devel/setup.bash
 ```
 
 **9. Configure Your Local Paths**
-- Update the dataset and checkpoint paths in [settings/var.py](https://github.com/jkw0701/act_for_franka/blob/sim/settings/var.py) :
+- Update the dataset and checkpoint paths in [settings/var.py](https://github.com/jkw0701/act_for_franka/blob/real/settings/var.py) :
 ```bash
     # settings/var.py
 
