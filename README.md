@@ -84,6 +84,17 @@ $ source devel/setup.bash
   $ source devel/setup.bash
 ```
 
+**9. Configure Your Local Paths**
+- Update the dataset and checkpoint paths in [settings/var.py](https://github.com/jkw0701/act_for_franka/blob/sim/settings/var.py) :
+```bash
+    # settings/var.py
+
+    # Paths
+      CHECKPOINT_DIR = 'path/to/your/checkpoints'
+      DATASET_DIR = "path/to/your/dataset"
+```
+
+> Replace `'/path/to/your/...` with the actual directory on your system.
 
 ---
 
@@ -112,7 +123,6 @@ $ source devel/setup.bash
   $ cd act_for_franka/real
   $ python3 live_record_mod.py
 ```
-
 
 ---
 
