@@ -99,5 +99,6 @@ Geonyeong Ko (M.S. Candidate, Sogang University)
 
 ### Contact
 Keunwoo Jang (jang90@kist.re.kr) 
-### License
 
+### License
+This project is licensed under the MIT License.
