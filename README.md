@@ -87,7 +87,7 @@ https://github.com/user-attachments/assets/5a200755-d5c3-4643-a677-b870d9c4087c
 
 ## About 
 ### Contributors
-Keunwoo Jang (Senior Researcher, Center for Humanoid Research, KIST)
+[Keunwoo Jang](https://github.com/jkw0701) (Senior Researcher, Center for Humanoid Research, KIST)
 
 [Jiyeon Joung](https://github.com/sanananan3) (Research Intern, Center for Humanoid Research, KIST)
 
