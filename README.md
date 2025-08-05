@@ -95,7 +95,7 @@ https://github.com/user-attachments/assets/5a200755-d5c3-4643-a677-b870d9c4087c
 
 [Namyoon Kim](https://github.com/kimnamyoon9) (Research Intern, Center for Humanoid Research, KIST)
 
-Geonyoung Ko (M.S. Candidate, Sogang University)
+Geonyeong Ko (M.S. Candidate, Sogang University)
 
 ### Contact
 Keunwoo Jang (jang90@kist.re.kr) 
