@@ -89,11 +89,11 @@ https://github.com/user-attachments/assets/5a200755-d5c3-4643-a677-b870d9c4087c
 ### Contributors
 Keunwoo Jang (Senior Researcher, Center for Humanoid Research, KIST)
 
-Jiyeon Joung (Research Intern, Center for Humanoid Research, KIST)
+[Jiyeon Joung](https://github.com/sanananan3) (Research Intern, Center for Humanoid Research, KIST)
 
-Seungseop Lee (Research Intern, Center for Humanoid Research, KIST)
+[Seungseop Lee](https://github.com/Seung-Sub) (Research Intern, Center for Humanoid Research, KIST)
 
-Namyoon Kim (Research Intern, Center for Humanoid Research, KIST)
+[Namyoon Kim](https://github.com/kimnamyoon9) (Research Intern, Center for Humanoid Research, KIST)
 
 Geonyoung Ko (M.S. Candidate, Sogang University)
 
